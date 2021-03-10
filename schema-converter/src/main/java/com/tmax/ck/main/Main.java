@@ -14,6 +14,10 @@ import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+
+import com.google.cloud.translate.Translate;
+import com.google.cloud.translate.TranslateOptions;
+import com.google.cloud.translate.Translate.TranslateOption;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -22,11 +26,18 @@ public class Main {
 	static Integer sequence = new Integer(0);
 	static Map<String, JsonObject> schemaMap = new HashMap<String, JsonObject>();
 	static Gson gsonObj = new Gson();
+	static List<String> originalList = new ArrayList<String>();
+	static boolean autoTranslation = true;
 
 	public static void main(String args[]) {
-		
+
 		System.out.println("Start");
 		try {
+			Translate translate = null;
+			if (autoTranslation) {
+				translate = TranslateOptions.newBuilder().build().getService();
+			}
+
 			String rootDir = "C:\\schema\\";
 			String outputDir = rootDir + System.currentTimeMillis() + "\\";
 
@@ -64,22 +75,39 @@ public class Main {
 
 			for (String schemaKey : schemaMap.keySet()) {
 				JsonObject schema = schemaMap.get(schemaKey);
-				
+
 				FileWriter fw = new FileWriter(new File(outputDir + schemaKey));
 				PrintWriter pw = new PrintWriter(fw);
 				pw.print(schema.toString());
 				pw.close();
 			}
-			
+
+			// batch 처리를 위해서 작성한 코드. 현재 payload가 너무 크면 400 에러가 발생하는 문제가 있어서 주석처리
+//			List<Translation> translatedList = translate.translate(originalList,
+//					TranslateOption.sourceLanguage("en").targetLanguage("ko"));
+
 			int i = 0;
 			HSSFWorkbook workbook = new HSSFWorkbook();
 			HSSFSheet sheet = workbook.createSheet();
 			for (List<String> pair : keySheet) {
-				HSSFRow row = sheet.createRow(i++);
+				HSSFRow row = sheet.createRow(i);
+
 				HSSFCell cell1 = row.createCell(0);
 				HSSFCell cell2 = row.createCell(1);
+				HSSFCell cell3 = row.createCell(2);
+
 				cell1.setCellValue(pair.get(0));
 				cell2.setCellValue(pair.get(1));
+//				cell3.setCellValue(translatedList.get(i).getTranslatedText());
+
+				if (autoTranslation) {
+					String translated = translate
+							.translate(pair.get(1), TranslateOption.sourceLanguage("en").targetLanguage("ko"))
+							.getTranslatedText();
+					cell3.setCellValue(translated);
+					System.out.println(translated);
+				}
+				i++;
 			}
 			workbook.write(new File(outputDir + "output.xls"));
 			workbook.close();
@@ -99,6 +127,7 @@ public class Main {
 				List<String> codePair = new ArrayList<String>();
 				codePair.add(code);
 				codePair.add(original);
+				originalList.add(original);
 				keySheet.add(codePair);
 				schema.addProperty(key, code);
 			}
