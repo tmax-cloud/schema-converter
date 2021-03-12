@@ -40,4 +40,5 @@ dependencies {
 	implementation 'org.apache.poi:poi:5.0.0'
 	implementation platform('com.google.cloud:libraries-bom:18.0.0')
 	compile 'com.google.cloud:google-cloud-translate'
+	compile('com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.7.4')
 }
