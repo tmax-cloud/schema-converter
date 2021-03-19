@@ -27,15 +27,13 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
 public class Main {
-	static List<List<String>> keySheet = new ArrayList<List<String>>();
-	static List<List<String>> keySheetCrd = new ArrayList<List<String>>();
+//	static List<List<String>> keySheet = new ArrayList<List<String>>();
+	static Map<String, List<List<String>>> keySheetMap = new HashMap<String, List<List<String>>>();
 	static Integer sequence = new Integer(0);
 	static Map<String, JsonObject> schemaMap = new HashMap<String, JsonObject>();
 	static Map<String, Map<String, Object>> yamlMap = new HashMap<String, Map<String, Object>>();
 	static Gson gsonObj = new Gson();
 	static ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-	static List<String> originalList = new ArrayList<String>();
-	static List<String> originalListCrd = new ArrayList<String>();
 	static ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(10, 100, 0, TimeUnit.MILLISECONDS,
 			new LinkedBlockingQueue<Runnable>());
 
@@ -93,18 +91,21 @@ public class Main {
 			}
 
 			for (File yamlFile : yamlFiles) {
-				FileReader fr = new FileReader(yamlFile);
 				yamlMap.put(yamlFile.getName(), mapper.readValue(yamlFile, Map.class));
 			}
 
 			for (String schemaKey : schemaMap.keySet()) {
 				JsonObject schema = schemaMap.get(schemaKey);
-				convertDescriptionToCode(schema);
+				List<List<String>> keySheet = new ArrayList<List<String>>();
+				convertDescriptionToCode(keySheet, schema, schemaKey);
+				keySheetMap.put(schemaKey, keySheet);
 			}
 
 			for (String yamlKey : yamlMap.keySet()) {
 				Map<String, Object> yaml = yamlMap.get(yamlKey);
-				convertCrdDescriptionToCode(yaml);
+				List<List<String>> keySheet = new ArrayList<List<String>>();
+				convertCrdDescriptionToCode(keySheet, yaml, yamlKey);
+				keySheetMap.put(yamlKey, keySheet);
 			}
 
 			for (String schemaKey : schemaMap.keySet()) {
@@ -124,50 +125,35 @@ public class Main {
 //			List<Translation> translatedList = translate.translate(originalList,
 //					TranslateOption.sourceLanguage("en").targetLanguage("ko"));
 
-			int i = 0;
 			HSSFWorkbook workbook = new HSSFWorkbook();
-			HSSFSheet sheet = workbook.createSheet();
-			for (List<String> pair : keySheet) {
-				HSSFRow row = sheet.createRow(i);
 
-				HSSFCell cell1 = row.createCell(0);
-				HSSFCell cell2 = row.createCell(1);
-				HSSFCell cell3 = row.createCell(2);
+			for (String sheetKey : keySheetMap.keySet()) {
+				int i = 0;
+				HSSFSheet sheet = workbook.createSheet(sheetKey);
 
-				cell1.setCellValue(pair.get(0));
-				cell2.setCellValue(pair.get(1));
-//				cell3.setCellValue(translatedList.get(i).getTranslatedText());
+				for (List<String> pair : keySheetMap.get(sheetKey)) {
+					HSSFRow row = sheet.createRow(i);
 
-				if (autoTranslation) {
-					String translated = translate
-							.translate(pair.get(1), TranslateOption.sourceLanguage("en").targetLanguage("ko"))
-							.getTranslatedText();
-					cell3.setCellValue(translated);
-					System.out.println(translated);
+					HSSFCell cell1 = row.createCell(0);
+					HSSFCell cell2 = row.createCell(1);
+					HSSFCell cell3 = row.createCell(2);
+					System.out.println(pair.get(0));
+					cell1.setCellValue(pair.get(0));
+					cell2.setCellValue(pair.get(1));
+					// cell3.setCellValue(translatedList.get(i).getTranslatedText());
+
+					if (autoTranslation) {
+						String translated = translate
+								.translate(pair.get(1), TranslateOption.sourceLanguage("en").targetLanguage("ko"))
+								.getTranslatedText();
+						cell3.setCellValue(translated);
+						System.out.println(translated);
+					}
+					i++;
 				}
-				i++;
+
 			}
-			
-			for (List<String> pair : keySheetCrd) {
-				HSSFRow row = sheet.createRow(i);
 
-				HSSFCell cell1 = row.createCell(0);
-				HSSFCell cell2 = row.createCell(1);
-				HSSFCell cell3 = row.createCell(2);
-
-				cell1.setCellValue(pair.get(0));
-				cell2.setCellValue(pair.get(1));
-//				cell3.setCellValue(translatedList.get(i).getTranslatedText());
-
-				if (autoTranslation) {
-					String translated = translate
-							.translate(pair.get(1), TranslateOption.sourceLanguage("en").targetLanguage("ko"))
-							.getTranslatedText();
-					cell3.setCellValue(translated);
-					System.out.println(translated);
-				}
-				i++;
-			}
 			workbook.write(new File(outputDir + "output.xls"));
 			workbook.close();
 		} catch (Exception e) {
@@ -176,36 +162,36 @@ public class Main {
 		System.out.println("End");
 	}
 
-	static void convertDescriptionToCode(JsonObject schema) {
+	static void convertDescriptionToCode(List<List<String>> keySheet, JsonObject schema, String path) {
 		for (String key : schema.keySet()) {
 			if (schema.get(key).isJsonObject()) {
-				convertDescriptionToCode((JsonObject) schema.get(key));
+				convertDescriptionToCode(keySheet, (JsonObject) schema.get(key), path + "." + key);
 			} else if (key.equals("description")) {
 				String original = schema.get(key).getAsString();
-				String code = "%STR" + String.valueOf(sequence++) + "";
+//				String code = "%" + path + String.valueOf(sequence++) + "";
+				String code = "%" + path;
 				List<String> codePair = new ArrayList<String>();
 				codePair.add(code);
 				codePair.add(original);
-				originalList.add(original);
 				keySheet.add(codePair);
 				schema.addProperty(key, code);
 			}
 		}
 	}
 
-	static void convertCrdDescriptionToCode(Map<String, Object> yaml) {
+	static void convertCrdDescriptionToCode(List<List<String>> keySheet, Map<String, Object> yaml, String path) {
 		for (String key : yaml.keySet()) {
 			if (yaml.get(key) instanceof Map<?, ?>) {
-				convertCrdDescriptionToCode((Map<String, Object>) yaml.get(key));
+				convertCrdDescriptionToCode(keySheet, (Map<String, Object>) yaml.get(key), path + "." + key);
 			} else if (key.equals("description")) {
 				System.out.println(yaml.get(key));
 				String original = (String) yaml.get(key);
-				String code = "%STR" + String.valueOf(sequence++) + "";
+//				String code = "%" + path + String.valueOf(sequence++) + "";
+				String code = "%" + path;
 				List<String> codePair = new ArrayList<String>();
 				codePair.add(code);
 				codePair.add(original);
-				originalListCrd.add(original);
-				keySheetCrd.add(codePair);
+				keySheet.add(codePair);
 				yaml.replace(key, code);
 			}
 		}
