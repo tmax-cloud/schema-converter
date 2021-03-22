@@ -38,7 +38,7 @@ public class Main {
 			new LinkedBlockingQueue<Runnable>());
 
 	// configuration
-	static boolean autoTranslation = false;
+	static boolean autoTranslation = true;
 
 	public static void main(String args[]) {
 
@@ -49,6 +49,7 @@ public class Main {
 				translate = TranslateOptions.newBuilder().build().getService();
 			}
 
+			// schema 파일 혹은 CRD yaml 파일이 있는 root directory
 			String rootDir = "C:\\schema\\";
 			String outputDir = rootDir + System.currentTimeMillis() + "\\";
 
@@ -63,6 +64,7 @@ public class Main {
 				outputDirFile.mkdir();
 			}
 
+			// schema json 파일만 걸러냄
 			File[] jsonFiles = rootDirFile.listFiles(new FileFilter() {
 
 				@Override
@@ -74,6 +76,7 @@ public class Main {
 				}
 			});
 
+			// CRD yaml 파일만 걸러냄
 			File[] yamlFiles = rootDirFile.listFiles(new FileFilter() {
 
 				@Override
@@ -85,6 +88,7 @@ public class Main {
 				}
 			});
 
+			// 언마샬러가 달라서 json 과 yaml 로직 분리
 			for (File jsonFile : jsonFiles) {
 				FileReader fr = new FileReader(jsonFile);
 				schemaMap.put(jsonFile.getName(), gsonObj.fromJson(fr, JsonObject.class));
@@ -94,6 +98,7 @@ public class Main {
 				yamlMap.put(yamlFile.getName(), mapper.readValue(yamlFile, Map.class));
 			}
 
+			// 재귀함수로 파일별로 키매핑 및 keySheetMap 에서 통합관리 (key = 파일명 + json path, value = key로 대체되기 전 원본 String)
 			for (String schemaKey : schemaMap.keySet()) {
 				JsonObject schema = schemaMap.get(schemaKey);
 				List<List<String>> keySheet = new ArrayList<List<String>>();
@@ -108,6 +113,7 @@ public class Main {
 				keySheetMap.put(yamlKey, keySheet);
 			}
 
+			// key로 replace 된 후의 json schema 및 CRD yaml 에 대해서 output directory에 저장
 			for (String schemaKey : schemaMap.keySet()) {
 				JsonObject schema = schemaMap.get(schemaKey);
 
@@ -125,15 +131,20 @@ public class Main {
 //			List<Translation> translatedList = translate.translate(originalList,
 //					TranslateOption.sourceLanguage("en").targetLanguage("ko"));
 
+			// CSV에서 콤마가 separator로 인식됨, 이스케이프 처리 하기 싫어서 OOXML 이용
+			// 단일 파일에
 			HSSFWorkbook workbook = new HSSFWorkbook();
 
 			for (String sheetKey : keySheetMap.keySet()) {
 				int i = 0;
+				// 파일별로 sheet를 분리하고
 				HSSFSheet sheet = workbook.createSheet(sheetKey);
 
 				for (List<String> pair : keySheetMap.get(sheetKey)) {
+					// sheet에서 key/value 별로 row 생성
 					HSSFRow row = sheet.createRow(i);
 
+					// key값, 원본, 번역본 순
 					HSSFCell cell1 = row.createCell(0);
 					HSSFCell cell2 = row.createCell(1);
 					HSSFCell cell3 = row.createCell(2);
@@ -149,11 +160,14 @@ public class Main {
 						cell3.setCellValue(translated);
 						System.out.println(translated);
 					}
+					
+					// row 처리를 위한 인덱스 변수 증가
 					i++;
 				}
 
 			}
 
+			// output directory 에 output.xls 파일로 엑셀파일 저장
 			workbook.write(new File(outputDir + "output.xls"));
 			workbook.close();
 		} catch (Exception e) {
@@ -162,6 +176,7 @@ public class Main {
 		System.out.println("End");
 	}
 
+	// value가 json object 일 경우 재귀로 하위탐색, key가 description일 경우 코드 변환
 	static void convertDescriptionToCode(List<List<String>> keySheet, JsonObject schema, String path) {
 		for (String key : schema.keySet()) {
 			if (schema.get(key).isJsonObject()) {
@@ -179,6 +194,7 @@ public class Main {
 		}
 	}
 
+	// value가 Map의 자식클래스일 경우 재귀로 하위탐색, key가 description일 경우 코드 변환
 	static void convertCrdDescriptionToCode(List<List<String>> keySheet, Map<String, Object> yaml, String path) {
 		for (String key : yaml.keySet()) {
 			if (yaml.get(key) instanceof Map<?, ?>) {
