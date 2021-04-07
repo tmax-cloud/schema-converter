@@ -38,7 +38,7 @@ public class Main {
 			new LinkedBlockingQueue<Runnable>());
 
 	// configuration
-	static boolean autoTranslation = true;
+	static boolean autoTranslation = false;
 
 	public static void main(String args[]) {
 
@@ -50,7 +50,8 @@ public class Main {
 			}
 
 			// schema 파일 혹은 CRD yaml 파일이 있는 root directory
-			String rootDir = "C:\\schema\\";
+//			String rootDir = "C:\\schema\\";
+			String rootDir = "C:\\cicd-crd\\";
 			String outputDir = rootDir + System.currentTimeMillis() + "\\";
 
 			File rootDirFile = new File(rootDir);
@@ -98,7 +99,8 @@ public class Main {
 				yamlMap.put(yamlFile.getName(), mapper.readValue(yamlFile, Map.class));
 			}
 
-			// 재귀함수로 파일별로 키매핑 및 keySheetMap 에서 통합관리 (key = 파일명 + json path, value = key로 대체되기 전 원본 String)
+			// 재귀함수로 파일별로 키매핑 및 keySheetMap 에서 통합관리 (key = 파일명 + json path, value = key로
+			// 대체되기 전 원본 String)
 			for (String schemaKey : schemaMap.keySet()) {
 				JsonObject schema = schemaMap.get(schemaKey);
 				List<List<String>> keySheet = new ArrayList<List<String>>();
@@ -160,7 +162,7 @@ public class Main {
 						cell3.setCellValue(translated);
 						System.out.println(translated);
 					}
-					
+
 					// row 처리를 위한 인덱스 변수 증가
 					i++;
 				}
@@ -183,7 +185,6 @@ public class Main {
 				convertDescriptionToCode(keySheet, (JsonObject) schema.get(key), path + "." + key);
 			} else if (key.equals("description")) {
 				String original = schema.get(key).getAsString();
-//				String code = "%" + path + String.valueOf(sequence++) + "";
 				String code = "%" + path;
 				List<String> codePair = new ArrayList<String>();
 				codePair.add(code);
@@ -199,10 +200,27 @@ public class Main {
 		for (String key : yaml.keySet()) {
 			if (yaml.get(key) instanceof Map<?, ?>) {
 				convertCrdDescriptionToCode(keySheet, (Map<String, Object>) yaml.get(key), path + "." + key);
-			} else if (key.equals("description")) {
-				System.out.println(yaml.get(key));
-				String original = (String) yaml.get(key);
-//				String code = "%" + path + String.valueOf(sequence++) + "";
+			} 
+			/*
+			 * value가 List<?> 면서, 구성요소들이 Map<?, ?> 일 경우에 한정
+			 * 구성요소들이 List<?> 일 경우 이슈 나오면 처리할 것임
+			 */
+			// value가 List 일 경우 예외처리(임시)
+			else if (yaml.get(key) instanceof List<?>) { 
+				for (Object obj : (List) yaml.get(key)) {
+					if (obj instanceof Map<?, ?>) {
+						convertCrdDescriptionToCode(keySheet, (Map<String, Object>) obj, path + "." + key);
+					}
+				}
+			} 
+			/*
+			 * jsonSchema 가 CRD yaml 아래에는 openAPIV3Schema 로 들어가는데, openAPIV3Schema 아닌 곳에도 description을 key로 가지는 오브젝트 다수 발견
+			 * 우선 스펙상 openAPIV3Schema 만 structural schema에 포함되기 때문에 한정 지음
+			 * 비효율적인 코딩이지만 openAPIV3Schema 객체의 yaml path를 확정지을 수 없기 때문에 풀스캔
+			 */
+			else if (key.equals("description") && path.contains(".openAPIV3Schema")) {
+				String original = null;
+				original = (String) yaml.get(key);
 				String code = "%" + path;
 				List<String> codePair = new ArrayList<String>();
 				codePair.add(code);
