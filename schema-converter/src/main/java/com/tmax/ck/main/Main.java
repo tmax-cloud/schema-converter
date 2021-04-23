@@ -49,7 +49,7 @@ public class Main {
 				translate = TranslateOptions.newBuilder().build().getService();
 			}
 
-			// schema ÆÄÀÏ È¤Àº CRD yaml ÆÄÀÏÀÌ ÀÖ´Â root directory
+			// schema íŒŒì¼ í˜¹ì€ CRD yaml íŒŒì¼ì´ ìˆëŠ” root directory
 //			String rootDir = "C:\\schema\\";
 			String rootDir = "C:\\cicd-crd\\";
 			String outputDir = rootDir + System.currentTimeMillis() + "\\";
@@ -65,7 +65,7 @@ public class Main {
 				outputDirFile.mkdir();
 			}
 
-			// schema json ÆÄÀÏ¸¸ °É·¯³¿
+			// schema json íŒŒì¼ë§Œ ê±¸ëŸ¬ëƒ„
 			File[] jsonFiles = rootDirFile.listFiles(new FileFilter() {
 
 				@Override
@@ -77,7 +77,7 @@ public class Main {
 				}
 			});
 
-			// CRD yaml ÆÄÀÏ¸¸ °É·¯³¿
+			// CRD yaml íŒŒì¼ë§Œ ê±¸ëŸ¬ëƒ„
 			File[] yamlFiles = rootDirFile.listFiles(new FileFilter() {
 
 				@Override
@@ -89,7 +89,7 @@ public class Main {
 				}
 			});
 
-			// ¾ğ¸¶¼£·¯°¡ ´Ş¶ó¼­ json °ú yaml ·ÎÁ÷ ºĞ¸®
+			// ì–¸ë§ˆìƒ¬ëŸ¬ê°€ ë‹¬ë¼ì„œ json ê³¼ yaml ë¡œì§ ë¶„ë¦¬
 			for (File jsonFile : jsonFiles) {
 				FileReader fr = new FileReader(jsonFile);
 				schemaMap.put(jsonFile.getName(), gsonObj.fromJson(fr, JsonObject.class));
@@ -99,8 +99,8 @@ public class Main {
 				yamlMap.put(yamlFile.getName(), mapper.readValue(yamlFile, Map.class));
 			}
 
-			// Àç±ÍÇÔ¼ö·Î ÆÄÀÏº°·Î Å°¸ÅÇÎ ¹× keySheetMap ¿¡¼­ ÅëÇÕ°ü¸® (key = ÆÄÀÏ¸í + json path, value = key·Î
-			// ´ëÃ¼µÇ±â Àü ¿øº» String)
+			// ì¬ê·€í•¨ìˆ˜ë¡œ íŒŒì¼ë³„ë¡œ í‚¤ë§¤í•‘ ë° keySheetMap ì—ì„œ í†µí•©ê´€ë¦¬ (key = íŒŒì¼ëª… + json path, value = keyë¡œ
+			// ëŒ€ì²´ë˜ê¸° ì „ ì›ë³¸ String)
 			for (String schemaKey : schemaMap.keySet()) {
 				JsonObject schema = schemaMap.get(schemaKey);
 				List<List<String>> keySheet = new ArrayList<List<String>>();
@@ -115,7 +115,7 @@ public class Main {
 				keySheetMap.put(yamlKey, keySheet);
 			}
 
-			// key·Î replace µÈ ÈÄÀÇ json schema ¹× CRD yaml ¿¡ ´ëÇØ¼­ output directory¿¡ ÀúÀå
+			// keyë¡œ replace ëœ í›„ì˜ json schema ë° CRD yaml ì— ëŒ€í•´ì„œ output directoryì— ì €ì¥
 			for (String schemaKey : schemaMap.keySet()) {
 				JsonObject schema = schemaMap.get(schemaKey);
 
@@ -129,24 +129,24 @@ public class Main {
 				mapper.writeValue(new File(outputDir + yamlKey), yamlMap.get(yamlKey));
 			}
 
-			// batch Ã³¸®¸¦ À§ÇØ¼­ ÀÛ¼ºÇÑ ÄÚµå. ÇöÀç payload°¡ ³Ê¹« Å©¸é 400 ¿¡·¯°¡ ¹ß»ıÇÏ´Â ¹®Á¦°¡ ÀÖ¾î¼­ ÁÖ¼®Ã³¸®
+			// batch ì²˜ë¦¬ë¥¼ ìœ„í•´ì„œ ì‘ì„±í•œ ì½”ë“œ. í˜„ì¬ payloadê°€ ë„ˆë¬´ í¬ë©´ 400 ì—ëŸ¬ê°€ ë°œìƒí•˜ëŠ” ë¬¸ì œê°€ ìˆì–´ì„œ ì£¼ì„ì²˜ë¦¬
 //			List<Translation> translatedList = translate.translate(originalList,
 //					TranslateOption.sourceLanguage("en").targetLanguage("ko"));
 
-			// CSV¿¡¼­ ÄŞ¸¶°¡ separator·Î ÀÎ½ÄµÊ, ÀÌ½ºÄÉÀÌÇÁ Ã³¸® ÇÏ±â ½È¾î¼­ OOXML ÀÌ¿ë
-			// ´ÜÀÏ ÆÄÀÏ¿¡
+			// CSVì—ì„œ ì½¤ë§ˆê°€ separatorë¡œ ì¸ì‹ë¨, ì´ìŠ¤ì¼€ì´í”„ ì²˜ë¦¬ í•˜ê¸° ì‹«ì–´ì„œ OOXML ì´ìš©
+			// ë‹¨ì¼ íŒŒì¼ì—
 			HSSFWorkbook workbook = new HSSFWorkbook();
 
 			for (String sheetKey : keySheetMap.keySet()) {
 				int i = 0;
-				// ÆÄÀÏº°·Î sheet¸¦ ºĞ¸®ÇÏ°í
+				// íŒŒì¼ë³„ë¡œ sheetë¥¼ ë¶„ë¦¬í•˜ê³ 
 				HSSFSheet sheet = workbook.createSheet(sheetKey);
 
 				for (List<String> pair : keySheetMap.get(sheetKey)) {
-					// sheet¿¡¼­ key/value º°·Î row »ı¼º
+					// sheetì—ì„œ key/value ë³„ë¡œ row ìƒì„±
 					HSSFRow row = sheet.createRow(i);
 
-					// key°ª, ¿øº», ¹ø¿ªº» ¼ø
+					// keyê°’, ì›ë³¸, ë²ˆì—­ë³¸ ìˆœ
 					HSSFCell cell1 = row.createCell(0);
 					HSSFCell cell2 = row.createCell(1);
 					HSSFCell cell3 = row.createCell(2);
@@ -163,13 +163,13 @@ public class Main {
 						System.out.println(translated);
 					}
 
-					// row Ã³¸®¸¦ À§ÇÑ ÀÎµ¦½º º¯¼ö Áõ°¡
+					// row ì²˜ë¦¬ë¥¼ ìœ„í•œ ì¸ë±ìŠ¤ ë³€ìˆ˜ ì¦ê°€
 					i++;
 				}
 
 			}
 
-			// output directory ¿¡ output.xls ÆÄÀÏ·Î ¿¢¼¿ÆÄÀÏ ÀúÀå
+			// output directory ì— output.xls íŒŒì¼ë¡œ ì—‘ì…€íŒŒì¼ ì €ì¥
 			workbook.write(new File(outputDir + "output.xls"));
 			workbook.close();
 		} catch (Exception e) {
@@ -178,7 +178,7 @@ public class Main {
 		System.out.println("End");
 	}
 
-	// value°¡ json object ÀÏ °æ¿ì Àç±Í·Î ÇÏÀ§Å½»ö, key°¡ descriptionÀÏ °æ¿ì ÄÚµå º¯È¯
+	// valueê°€ json object ì¼ ê²½ìš° ì¬ê·€ë¡œ í•˜ìœ„íƒìƒ‰, keyê°€ descriptionì¼ ê²½ìš° ì½”ë“œ ë³€í™˜
 	static void convertDescriptionToCode(List<List<String>> keySheet, JsonObject schema, String path) {
 		for (String key : schema.keySet()) {
 			if (schema.get(key).isJsonObject()) {
@@ -195,17 +195,17 @@ public class Main {
 		}
 	}
 
-	// value°¡ MapÀÇ ÀÚ½ÄÅ¬·¡½ºÀÏ °æ¿ì Àç±Í·Î ÇÏÀ§Å½»ö, key°¡ descriptionÀÏ °æ¿ì ÄÚµå º¯È¯
+	// valueê°€ Mapì˜ ìì‹í´ë˜ìŠ¤ì¼ ê²½ìš° ì¬ê·€ë¡œ í•˜ìœ„íƒìƒ‰, keyê°€ descriptionì¼ ê²½ìš° ì½”ë“œ ë³€í™˜
 	static void convertCrdDescriptionToCode(List<List<String>> keySheet, Map<String, Object> yaml, String path) {
 		for (String key : yaml.keySet()) {
 			if (yaml.get(key) instanceof Map<?, ?>) {
 				convertCrdDescriptionToCode(keySheet, (Map<String, Object>) yaml.get(key), path + "." + key);
 			} 
 			/*
-			 * value°¡ List<?> ¸é¼­, ±¸¼º¿ä¼ÒµéÀÌ Map<?, ?> ÀÏ °æ¿ì¿¡ ÇÑÁ¤
-			 * ±¸¼º¿ä¼ÒµéÀÌ List<?> ÀÏ °æ¿ì ÀÌ½´ ³ª¿À¸é Ã³¸®ÇÒ °ÍÀÓ
+			 * valueê°€ List<?> ë©´ì„œ, êµ¬ì„±ìš”ì†Œë“¤ì´ Map<?, ?> ì¼ ê²½ìš°ì— í•œì •
+			 * êµ¬ì„±ìš”ì†Œë“¤ì´ List<?> ì¼ ê²½ìš° ì´ìŠˆ ë‚˜ì˜¤ë©´ ì²˜ë¦¬í•  ê²ƒì„
 			 */
-			// value°¡ List ÀÏ °æ¿ì ¿¹¿ÜÃ³¸®(ÀÓ½Ã)
+			// valueê°€ List ì¼ ê²½ìš° ì˜ˆì™¸ì²˜ë¦¬(ì„ì‹œ)
 			else if (yaml.get(key) instanceof List<?>) { 
 				for (Object obj : (List) yaml.get(key)) {
 					if (obj instanceof Map<?, ?>) {
@@ -214,9 +214,9 @@ public class Main {
 				}
 			} 
 			/*
-			 * jsonSchema °¡ CRD yaml ¾Æ·¡¿¡´Â openAPIV3Schema ·Î µé¾î°¡´Âµ¥, openAPIV3Schema ¾Æ´Ñ °÷¿¡µµ descriptionÀ» key·Î °¡Áö´Â ¿ÀºêÁ§Æ® ´Ù¼ö ¹ß°ß
-			 * ¿ì¼± ½ºÆå»ó openAPIV3Schema ¸¸ structural schema¿¡ Æ÷ÇÔµÇ±â ¶§¹®¿¡ ÇÑÁ¤ ÁöÀ½
-			 * ºñÈ¿À²ÀûÀÎ ÄÚµùÀÌÁö¸¸ openAPIV3Schema °´Ã¼ÀÇ yaml path¸¦ È®Á¤ÁöÀ» ¼ö ¾ø±â ¶§¹®¿¡ Ç®½ºÄµ
+			 * jsonSchema ê°€ CRD yaml ì•„ë˜ì—ëŠ” openAPIV3Schema ë¡œ ë“¤ì–´ê°€ëŠ”ë°, openAPIV3Schema ì•„ë‹Œ ê³³ì—ë„ descriptionì„ keyë¡œ ê°€ì§€ëŠ” ì˜¤ë¸Œì íŠ¸ ë‹¤ìˆ˜ ë°œê²¬
+			 * ìš°ì„  ìŠ¤í™ìƒ openAPIV3Schema ë§Œ structural schemaì— í¬í•¨ë˜ê¸° ë•Œë¬¸ì— í•œì • ì§€ìŒ
+			 * ë¹„íš¨ìœ¨ì ì¸ ì½”ë”©ì´ì§€ë§Œ openAPIV3Schema ê°ì²´ì˜ yaml pathë¥¼ í™•ì •ì§€ì„ ìˆ˜ ì—†ê¸° ë•Œë¬¸ì— í’€ìŠ¤ìº”
 			 */
 			else if (key.equals("description") && path.contains(".openAPIV3Schema")) {
 				String original = null;
