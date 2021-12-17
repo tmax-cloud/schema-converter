@@ -7,8 +7,6 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.InputStream;
-import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,13 +29,6 @@ import com.google.cloud.translate.TranslateOptions;
 import com.google.cloud.translate.Translate.TranslateOption;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.AbstractConstruct;
-import org.yaml.snakeyaml.constructor.Constructor;
-import org.yaml.snakeyaml.nodes.Node;
-import org.yaml.snakeyaml.nodes.ScalarNode;
-import org.yaml.snakeyaml.nodes.Tag;
 
 public class Main {
 //	static List<List<String>> keySheet = new ArrayList<List<String>>();
