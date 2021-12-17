@@ -5,6 +5,10 @@ import java.io.FileFilter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStream;
+import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,6 +16,8 @@ import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
@@ -25,6 +31,13 @@ import com.google.cloud.translate.TranslateOptions;
 import com.google.cloud.translate.Translate.TranslateOption;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.AbstractConstruct;
+import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.nodes.Node;
+import org.yaml.snakeyaml.nodes.ScalarNode;
+import org.yaml.snakeyaml.nodes.Tag;
 
 public class Main {
 //	static List<List<String>> keySheet = new ArrayList<List<String>>();
@@ -53,6 +66,8 @@ public class Main {
 //			String rootDir = "C:\\schema\\";
 			String rootDir = "C:\\cicd-crd\\";
 			String outputDir = rootDir + System.currentTimeMillis() + "\\";
+			System.out.println("rootDir = " + rootDir);
+			System.out.println("outputDir = " + outputDir + "\n");
 
 			File rootDirFile = new File(rootDir);
 			if (!rootDirFile.isDirectory()) {
@@ -96,7 +111,21 @@ public class Main {
 			}
 
 			for (File yamlFile : yamlFiles) {
-				yamlMap.put(yamlFile.getName(), mapper.readValue(yamlFile, Map.class));
+				// 하나의 yaml파일에 여러 CRD를 담고 있는 경우
+				// text를 parsing해서 (crdname.yaml, crd)로 yamlMap에 put
+				BufferedReader br = new BufferedReader(
+					new FileReader(yamlFile)
+				);
+
+				String line;
+				Pattern pattern = Pattern.compile("^\\s{4}plural: [a-zA-Z]+$");
+				while ((line = br.readLine()) != null) {
+					Matcher matcher = pattern.matcher(line);
+					if (matcher.matches()) {
+						yamlMap.put(line.substring("    plural: ".length()) + ".yaml", mapper.readValue(yamlFile, Map.class));
+					}
+				}
+				//yamlMap.put(yamlFile.getName(), mapper.readValue(yamlFile, Map.class));
 			}
 
 			// 재귀함수로 파일별로 키매핑 및 keySheetMap 에서 통합관리 (key = 파일명 + json path, value = key로
@@ -125,8 +154,18 @@ public class Main {
 				pw.close();
 			}
 
+			// 하나의 파일로 다시 합쳐질 수 있도록 buffer writer를 이용
+			// 입력된 파일 이름을 그대로 사용
 			for (String yamlKey : yamlMap.keySet()) {
-				mapper.writeValue(new File(outputDir + yamlKey), yamlMap.get(yamlKey));
+				PrintWriter result = new PrintWriter(
+					new BufferedWriter(
+						new FileWriter(
+							new File(outputDir + yamlFiles[0].getName()), true
+							)
+						)
+					);
+				mapper.writeValue(result, yamlMap.get(yamlKey));
+				// mapper.writeValue(new File(outputDir + yamlKey), yamlMap.get(yamlKey));
 			}
 
 			// batch 처리를 위해서 작성한 코드. 현재 payload가 너무 크면 400 에러가 발생하는 문제가 있어서 주석처리
@@ -200,7 +239,7 @@ public class Main {
 		for (String key : yaml.keySet()) {
 			if (yaml.get(key) instanceof Map<?, ?>) {
 				convertCrdDescriptionToCode(keySheet, (Map<String, Object>) yaml.get(key), path + "." + key);
-			} 
+			}
 			/*
 			 * value가 List<?> 면서, 구성요소들이 Map<?, ?> 일 경우에 한정
 			 * 구성요소들이 List<?> 일 경우 이슈 나오면 처리할 것임
