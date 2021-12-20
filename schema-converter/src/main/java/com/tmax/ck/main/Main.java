@@ -7,6 +7,7 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -48,15 +49,37 @@ public class Main {
 
 		System.out.println("Start");
 		try {
+			// schema 파일 혹은 CRD yaml 파일이 있는 root directory
+//			String rootDir = "C:\\schema\\";
+			String rootDir = "C:\\cicd-crd\\";
+			String tempDir = Long.toString(System.currentTimeMillis());
+			if (args.length%2 != 0) {
+				System.out.println("=================================================");
+				System.out.println("ERROR: Wrong # of prameters");
+				System.out.println("=================================================");
+				return;
+			}
+
+			for (String arg : args) {
+				switch(arg) {
+				case "root":
+					rootDir = args[Arrays.asList(args).indexOf(arg) + 1] + "/";
+					break;
+				case "output":
+					tempDir = args[Arrays.asList(args).indexOf(arg) + 1];
+					break;
+				case "translate":
+					autoTranslation = Boolean.parseBoolean(args[Arrays.asList(args).indexOf(arg) + 1]);
+					break;
+				}
+			}
+			String outputDir = rootDir + tempDir + "/";
+			System.out.println(autoTranslation);
+			
 			Translate translate = null;
 			if (autoTranslation) {
 				translate = TranslateOptions.newBuilder().build().getService();
 			}
-
-			// schema 파일 혹은 CRD yaml 파일이 있는 root directory
-//			String rootDir = "C:\\schema\\";
-			String rootDir = "/root/convert-yaml/";
-			String outputDir = rootDir + System.currentTimeMillis() + "/";
 
 			System.out.println("rootDir = " + rootDir);
 			System.out.println("outputDir = " + outputDir);
