@@ -55,10 +55,11 @@ public class Main {
 
 			// schema 파일 혹은 CRD yaml 파일이 있는 root directory
 //			String rootDir = "C:\\schema\\";
-			String rootDir = "C:\\cicd-crd\\";
-			String outputDir = rootDir + System.currentTimeMillis() + "\\";
+			String rootDir = "/root/convert-yaml/";
+			String outputDir = rootDir + System.currentTimeMillis() + "/";
+
 			System.out.println("rootDir = " + rootDir);
-			System.out.println("outputDir = " + outputDir + "\n");
+			System.out.println("outputDir = " + outputDir);
 
 			File rootDirFile = new File(rootDir);
 			if (!rootDirFile.isDirectory()) {
@@ -101,6 +102,7 @@ public class Main {
 				schemaMap.put(jsonFile.getName(), gsonObj.fromJson(fr, JsonObject.class));
 			}
 
+			int cnt = 0;
 			for (File yamlFile : yamlFiles) {
 				// 하나의 yaml파일에 여러 CRD를 담고 있는 경우
 				// text를 parsing해서 (crdname.yaml, crd)로 yamlMap에 put
@@ -108,15 +110,44 @@ public class Main {
 					new FileReader(yamlFile)
 				);
 
-				String line;
+				BufferedWriter bw = new BufferedWriter(
+					new FileWriter(
+						new File(outputDir + "temp" + Integer.toString(cnt) + ".yaml")
+					)
+				);
+
+				ArrayList plurals = new ArrayList();
 				Pattern pattern = Pattern.compile("^\\s{4}plural: [a-zA-Z]+$");
+				String line = null;
 				while ((line = br.readLine()) != null) {
 					Matcher matcher = pattern.matcher(line);
 					if (matcher.matches()) {
-						yamlMap.put(line.substring("    plural: ".length()) + ".yaml", mapper.readValue(yamlFile, Map.class));
+						plurals.add(line.substring("    plural: ".length()) + ".yaml");
+					}
+					bw.write(line);
+					bw.newLine();
+					if (line.equals("---")) {
+						cnt++;
+						bw.flush();
+						bw.close();
+						bw = new BufferedWriter(
+							new FileWriter(
+								new File(outputDir + "temp" + Integer.toString(cnt) + ".yaml")
+							)
+						);
 					}
 				}
-				//yamlMap.put(yamlFile.getName(), mapper.readValue(yamlFile, Map.class));
+				bw.flush();
+				bw.close();
+				br.close();
+
+				for (int i = 0; i <= cnt; i++) {
+					File oldFile = new File(outputDir + "temp" + Integer.toString(i) + ".yaml");
+					File newFile = new File(outputDir + plurals.get(i).toString());
+					oldFile.renameTo(newFile);
+					yamlMap.put(plurals.get(i).toString(), mapper.readValue(newFile, Map.class));
+					newFile.delete();
+				}
 			}
 
 			// 재귀함수로 파일별로 키매핑 및 keySheetMap 에서 통합관리 (key = 파일명 + json path, value = key로
@@ -152,9 +183,9 @@ public class Main {
 					new BufferedWriter(
 						new FileWriter(
 							new File(outputDir + yamlFiles[0].getName()), true
-							)
 						)
-					);
+					)
+				);
 				mapper.writeValue(result, yamlMap.get(yamlKey));
 				// mapper.writeValue(new File(outputDir + yamlKey), yamlMap.get(yamlKey));
 			}
@@ -227,6 +258,7 @@ public class Main {
 
 	// value가 Map의 자식클래스일 경우 재귀로 하위탐색, key가 description일 경우 코드 변환
 	static void convertCrdDescriptionToCode(List<List<String>> keySheet, Map<String, Object> yaml, String path) {
+		//System.out.println(yaml.keySet());
 		for (String key : yaml.keySet()) {
 			if (yaml.get(key) instanceof Map<?, ?>) {
 				convertCrdDescriptionToCode(keySheet, (Map<String, Object>) yaml.get(key), path + "." + key);
