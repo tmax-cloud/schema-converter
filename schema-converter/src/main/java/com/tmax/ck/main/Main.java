@@ -5,6 +5,9 @@ import java.io.FileFilter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,17 +47,40 @@ public class Main {
 
 		System.out.println("Start");
 		try {
+			// schema 파일 혹은 CRD yaml 파일이 있는 root directory
+//			String rootDir = "C:\\schema\\";
+			String rootDir = "C:\\cicd-crd\\";
+			String tempDir = Long.toString(System.currentTimeMillis());
+			if (args.length%2 != 0) {
+				System.out.println("=================================================");
+				System.out.println("ERROR: Wrong # of prameters");
+				System.out.println("=================================================");
+				return;
+			}
+
+			for (String arg : args) {
+				switch(arg) {
+				case "root":
+					rootDir = args[Arrays.asList(args).indexOf(arg) + 1] + "/";
+					break;
+				case "output":
+					tempDir = args[Arrays.asList(args).indexOf(arg) + 1];
+					break;
+				case "translate":
+					autoTranslation = Boolean.parseBoolean(args[Arrays.asList(args).indexOf(arg) + 1]);
+					break;
+				}
+			}
+			String outputDir = rootDir + tempDir + "/";
+			System.out.println(autoTranslation);
+			
 			Translate translate = null;
 			if (autoTranslation) {
 				translate = TranslateOptions.newBuilder().build().getService();
 			}
 
-			// schema 파일 혹은 CRD yaml 파일이 있는 root directory
-//			String rootDir = "C:\\schema\\";
-			String rootDir = "C:\\cicd-crd\\";
-			String outputDir = rootDir + System.currentTimeMillis() + "\\";
 			System.out.println("rootDir = " + rootDir);
-			System.out.println("outputDir = " + outputDir + "\n");
+			System.out.println("outputDir = " + outputDir);
 
 			File rootDirFile = new File(rootDir);
 			if (!rootDirFile.isDirectory()) {
@@ -97,8 +123,52 @@ public class Main {
 				schemaMap.put(jsonFile.getName(), gsonObj.fromJson(fr, JsonObject.class));
 			}
 
+			int cnt = 0;
 			for (File yamlFile : yamlFiles) {
-				yamlMap.put(yamlFile.getName(), mapper.readValue(yamlFile, Map.class));
+				// 하나의 yaml파일에 여러 CRD를 담고 있는 경우
+				// text를 parsing해서 (crdname.yaml, crd)로 yamlMap에 put
+				BufferedReader br = new BufferedReader(
+					new FileReader(yamlFile)
+				);
+
+				BufferedWriter bw = new BufferedWriter(
+					new FileWriter(
+						new File(outputDir + "temp" + Integer.toString(cnt) + ".yaml")
+					)
+				);
+
+				ArrayList plurals = new ArrayList();
+				Pattern pattern = Pattern.compile("^\\s{4}plural: [a-zA-Z]+$");
+				String line = null;
+				while ((line = br.readLine()) != null) {
+					Matcher matcher = pattern.matcher(line);
+					if (matcher.matches()) {
+						plurals.add(line.substring("    plural: ".length()) + ".yaml");
+					}
+					bw.write(line);
+					bw.newLine();
+					if (line.equals("---")) {
+						cnt++;
+						bw.flush();
+						bw.close();
+						bw = new BufferedWriter(
+							new FileWriter(
+								new File(outputDir + "temp" + Integer.toString(cnt) + ".yaml")
+							)
+						);
+					}
+				}
+				bw.flush();
+				bw.close();
+				br.close();
+
+				for (int i = 0; i <= cnt; i++) {
+					File oldFile = new File(outputDir + "temp" + Integer.toString(i) + ".yaml");
+					File newFile = new File(outputDir + plurals.get(i).toString());
+					oldFile.renameTo(newFile);
+					yamlMap.put(plurals.get(i).toString(), mapper.readValue(newFile, Map.class));
+					newFile.delete();
+				}
 			}
 
 			// 재귀함수로 파일별로 키매핑 및 keySheetMap 에서 통합관리 (key = 파일명 + json path, value = key로
@@ -128,7 +198,15 @@ public class Main {
 			}
 
 			for (String yamlKey : yamlMap.keySet()) {
-				mapper.writeValue(new File(outputDir + yamlKey), yamlMap.get(yamlKey));
+				PrintWriter result = new PrintWriter(
+					new BufferedWriter(
+						new FileWriter(
+							new File(outputDir + yamlFiles[0].getName()), true
+						)
+					)
+				);
+				mapper.writeValue(result, yamlMap.get(yamlKey));
+				// mapper.writeValue(new File(outputDir + yamlKey), yamlMap.get(yamlKey));
 			}
 
 			// batch 처리를 위해서 작성한 코드. 현재 payload가 너무 크면 400 에러가 발생하는 문제가 있어서 주석처리
@@ -199,6 +277,7 @@ public class Main {
 
 	// value가 Map의 자식클래스일 경우 재귀로 하위탐색, key가 description일 경우 코드 변환
 	static void convertCrdDescriptionToCode(List<List<String>> keySheet, Map<String, Object> yaml, String path) {
+		//System.out.println(yaml.keySet());
 		for (String key : yaml.keySet()) {
 			if (yaml.get(key) instanceof Map<?, ?>) {
 				convertCrdDescriptionToCode(keySheet, (Map<String, Object>) yaml.get(key), path + "." + key);
