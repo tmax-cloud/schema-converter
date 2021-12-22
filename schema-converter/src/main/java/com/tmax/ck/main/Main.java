@@ -15,8 +15,6 @@ import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
 
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
@@ -199,8 +197,6 @@ public class Main {
 				pw.close();
 			}
 
-			// 하나의 파일로 다시 합쳐질 수 있도록 buffer writer를 이용
-			// 입력된 파일 이름을 그대로 사용
 			for (String yamlKey : yamlMap.keySet()) {
 				PrintWriter result = new PrintWriter(
 					new BufferedWriter(
