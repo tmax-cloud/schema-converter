@@ -338,7 +338,7 @@ public class Main {
 				bw.close();
 				bw = new BufferedWriter(
 						new FileWriter(
-								new File(outputDir + plurals.get(plurals.size() - 1))));
+								new File(outputDir + "temp" + Integer.toString(cnt) + ".yaml")));
 			}
 		}
 		bw.flush();
