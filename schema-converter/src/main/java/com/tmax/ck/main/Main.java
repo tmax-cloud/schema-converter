@@ -133,6 +133,7 @@ public class Main {
 			for (File yamlFile : yamlFiles) {
 				int cnt = 0;
 				yamlMap = new HashMap<String, Map<String, Object>>();
+				keySheetMap = new HashMap<String, List<List<String>>>();
 				// 하나의 yaml파일에 여러 CRD를 담고 있는 경우
 				// text를 parsing해서 (crd_plural_name.yaml, crd)로 yamlMap에 put
 				BufferedReader br = new BufferedReader(
