@@ -132,7 +132,9 @@ public class Main {
 
 			int iter = 0;
 			for (File yamlFile : yamlFiles) {
-				System.out.printf("Start process for %s\n\n", yamlFile.getName());
+				System.out.println("\n=================================================");
+				System.out.printf("Start process for %s\n", yamlFile.getName());
+				System.out.println("=================================================");
 				// 새 파일을 처리하기 위해 Map객체들을 초기화
 				yamlMap = new HashMap<String, Map<String, Object>>();
 				keySheetMap = new HashMap<String, List<List<String>>>();
