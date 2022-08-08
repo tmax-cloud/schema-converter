@@ -132,6 +132,7 @@ public class Main {
 
 			int iter = 0;
 			for (File yamlFile : yamlFiles) {
+				System.out.printf("Start process for %s\n\n", yamlFile.getName());
 				// 새 파일을 처리하기 위해 Map객체들을 초기화
 				yamlMap = new HashMap<String, Map<String, Object>>();
 				keySheetMap = new HashMap<String, List<List<String>>>();
@@ -196,6 +197,9 @@ public class Main {
 				HSSFWorkbook workbook = new HSSFWorkbook();
 
 				for (String sheetKey : keySheetMap.keySet()) {
+					System.out.println("=================================================");
+					System.out.printf("%s\n", sheetKey);
+					System.out.println("=================================================");
 					int i = 0;
 					// 파일별로 sheet를 분리하고
 					HSSFSheet sheet = workbook.createSheet(sheetKey);
