@@ -8,6 +8,7 @@ import java.io.PrintWriter;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,6 +32,8 @@ import com.google.cloud.translate.Translate.TranslateOption;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
+// 코드 전체에 warning을 무시하는 것은 위험하므로 주석처리
+// @SuppressWarnings({ "unchecked" })
 public class Main {
 	// static List<List<String>> keySheet = new ArrayList<List<String>>();
 	static Map<String, List<List<String>>> keySheetMap = new HashMap<String, List<List<String>>>();
@@ -166,7 +169,11 @@ public class Main {
 					File oldFile = new File(outputDir + "temp" + Integer.toString(i) + ".yaml");
 					File newFile = new File(outputDir + plurals.get(i).toString());
 					oldFile.renameTo(newFile);
-					yamlMap.put(plurals.get(i).toString(), mapper.readValue(newFile, Map.class));
+
+					// 형변환을 체크해주면 좋으나 일단 정상동작하므로 warning을 무시
+					@SuppressWarnings({ "unchecked" })
+					Map<String, Object> mappedObj = mapper.readValue(newFile, Map.class);
+					yamlMap.put(plurals.get(i).toString(), mappedObj);
 					newFile.delete();
 				}
 
@@ -232,8 +239,14 @@ public class Main {
 						// cell3.setCellValue(translatedList.get(i).getTranslatedText());
 
 						if (autoTranslation) {
+							// String translated = translate
+							// .translate(pair.get(1),
+							// TranslateOption.sourceLanguage("en").targetLanguage("ko"))
+							// .getTranslatedText();
 							String translated = translate
-									.translate(pair.get(1), TranslateOption.sourceLanguage("en").targetLanguage("ko"))
+									.translate(pair.get(1),
+											TranslateOption.sourceLanguage("en"),
+											TranslateOption.targetLanguage("ko"))
 									.getTranslatedText();
 							cell3.setCellValue(translated);
 							System.out.println(translated);
@@ -282,7 +295,10 @@ public class Main {
 		// System.out.println(yaml.keySet());
 		for (String key : yaml.keySet()) {
 			if (yaml.get(key) instanceof Map<?, ?>) {
-				convertCrdDescriptionToCode(keySheet, (Map<String, Object>) yaml.get(key), path + "." + key);
+				// 형변환을 체크해주면 좋으나 일단 정상동작하므로 warning을 무시
+				@SuppressWarnings({ "unchecked" })
+				Map<String, Object> convertedObj = (Map<String, Object>) yaml.get(key);
+				convertCrdDescriptionToCode(keySheet, convertedObj, path + "." + key);
 			}
 			/*
 			 * value가 List<?> 면서, 구성요소들이 Map<?, ?> 일 경우에 한정
@@ -290,9 +306,12 @@ public class Main {
 			 */
 			// value가 List 일 경우 예외처리(임시)
 			else if (yaml.get(key) instanceof List<?>) {
-				for (Object obj : (List) yaml.get(key)) {
+				for (Object obj : convertObjToList(yaml.get(key))) {
 					if (obj instanceof Map<?, ?>) {
-						convertCrdDescriptionToCode(keySheet, (Map<String, Object>) obj, path + "." + key);
+						// 형변환을 체크해주면 좋으나 일단 정상동작하므로 warning을 무시
+						@SuppressWarnings({ "unchecked" })
+						Map<String, Object> convertedObj = (Map<String, Object>) obj;
+						convertCrdDescriptionToCode(keySheet, convertedObj, path + "." + key);
 					}
 				}
 			}
@@ -313,5 +332,16 @@ public class Main {
 				yaml.replace(key, code);
 			}
 		}
+	}
+
+	// object를 강제로 list로 캐스팅할경우 warning이 발생하므로 케이스를 나누어 object를 list로 변환
+	static List<?> convertObjToList(Object obj) {
+		if (obj.getClass().isArray()) {
+			return Arrays.asList((Object[]) obj);
+		} else if (obj instanceof Collection) {
+			return new ArrayList<>((Collection<?>) obj);
+		}
+
+		return new ArrayList<>();
 	}
 }
