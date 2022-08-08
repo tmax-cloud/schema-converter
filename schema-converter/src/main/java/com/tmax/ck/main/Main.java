@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -131,42 +132,15 @@ public class Main {
 
 			int iter = 0;
 			for (File yamlFile : yamlFiles) {
-				int cnt = 0;
+				// 새 파일을 처리하기 위해 Map객체들을 초기화
 				yamlMap = new HashMap<String, Map<String, Object>>();
 				keySheetMap = new HashMap<String, List<List<String>>>();
-				// 하나의 yaml파일에 여러 CRD를 담고 있는 경우
-				// text를 parsing해서 (crd_plural_name.yaml, crd)로 yamlMap에 put
-				BufferedReader br = new BufferedReader(
-						new FileReader(yamlFile));
 
-				BufferedWriter bw = new BufferedWriter(
-						new FileWriter(
-								new File(outputDir + "temp" + Integer.toString(cnt) + ".yaml")));
-
-				ArrayList<String> plurals = new ArrayList<String>();
-				Pattern pattern = Pattern.compile("^\\s{4}plural: [a-zA-Z]+$");
-				String line = null;
-				while ((line = br.readLine()) != null) {
-					Matcher matcher = pattern.matcher(line);
-					if (matcher.matches()) {
-						plurals.add(line.substring("    plural: ".length()) + ".yaml");
-					}
-					bw.write(line);
-					bw.newLine();
-					if (line.equals("---")) {
-						cnt++;
-						bw.flush();
-						bw.close();
-						bw = new BufferedWriter(
-								new FileWriter(
-										new File(outputDir + "temp" + Integer.toString(cnt) + ".yaml")));
-					}
-				}
-				bw.flush();
-				bw.close();
-				br.close();
-
-				for (int i = 0; i <= cnt; i++) {
+				// 하나의 yaml파일에 여러 CRD를 담고 있는 경우 여러개의 plural_name.yaml로 분리하고
+				// 각 파일을 순회하며 yamlMap에 put
+				ArrayList<String> plurals = splitYamlFileToMultipleFiles(yamlFile, outputDir);
+				for (int i = 0; i < plurals.size(); i++) {
+					// temp(count).yaml을 plural_name.yaml로 변경
 					File oldFile = new File(outputDir + "temp" + Integer.toString(i) + ".yaml");
 					File newFile = new File(outputDir + plurals.get(i).toString());
 					oldFile.renameTo(newFile);
@@ -333,6 +307,46 @@ public class Main {
 				yaml.replace(key, code);
 			}
 		}
+	}
+
+	// 하나의 yaml파일에 여러 CRD를 담고 있는 경우 각 CRD마다 crd_plural_name.yaml으로 분리하여 파일로 생성
+	static ArrayList<String> splitYamlFileToMultipleFiles(File yamlFile, String outputDir)
+			throws IOException {
+		int cnt = 0;
+		BufferedReader br = new BufferedReader(
+				new FileReader(yamlFile));
+
+		// file을 읽어야 plural name을 알 수 있기 때문에 file명을 temp(count).yaml로 일단 저장
+		BufferedWriter bw = new BufferedWriter(
+				new FileWriter(
+						new File(outputDir + "temp" + Integer.toString(cnt) + ".yaml")));
+
+		// plural name을 인식하기 위한 regular expression
+		Pattern pattern = Pattern.compile("^\\s{4}plural: [a-zA-Z]+$");
+		ArrayList<String> plurals = new ArrayList<String>();
+		String line = null;
+		while ((line = br.readLine()) != null) {
+			Matcher matcher = pattern.matcher(line);
+			if (matcher.matches()) {
+				plurals.add(line.substring("    plural: ".length()) + ".yaml");
+			}
+			bw.write(line);
+			bw.newLine();
+			if (line.equals("---")) {
+				cnt++;
+				bw.flush();
+				bw.close();
+				bw = new BufferedWriter(
+						new FileWriter(
+								new File(outputDir + plurals.get(plurals.size() - 1))));
+			}
+		}
+		bw.flush();
+		bw.close();
+		br.close();
+
+		// plural_name.yaml
+		return plurals;
 	}
 
 	// object를 강제로 list로 캐스팅할경우 warning이 발생하므로 케이스를 나누어 object를 list로 변환
