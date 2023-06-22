@@ -328,7 +328,7 @@ public class Main {
 						new File(outputDir + "temp" + Integer.toString(cnt) + ".yaml")));
 
 		// plural name을 인식하기 위한 regular expression
-		Pattern pattern = Pattern.compile("^\\s{4}plural: [a-zA-Z]+$");
+		Pattern pattern = Pattern.compile("^\\s{4}plural: [a-zA-Z0-9]+$");
 		ArrayList<String> plurals = new ArrayList<String>();
 		String line = null;
 		while ((line = br.readLine()) != null) {
